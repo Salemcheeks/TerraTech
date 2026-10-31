@@ -29,6 +29,7 @@ tailwind.config = {
   .tab-panel { display:none; }
   .tab-panel.active { display:block; animation: fadeUp .3s ease; }
   @keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+  .gauge-arc { transition: stroke-dashoffset .6s ease; }
   @media print { header, footer, .no-print { display:none !important; } .tab-panel { display:block !important; } }
 </style>
 </head>
@@ -44,9 +45,9 @@ tailwind.config = {
       <div class="min-w-0">
         <div class="flex items-center gap-2">
           <span class="font-extrabold text-lg tracking-tight text-slate-900">TerraTech</span>
-          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">v1.1 • DSS</span>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">v1.2 • DSS</span>
         </div>
-        <p class="text-[11px] text-slate-400 font-medium truncate">Crop Rotation Decision Support • ESP32 Sensor + Satellite</p>
+        <p class="text-[11px] text-slate-400 font-medium truncate">Crop Rotation Decision Support • Soil + Climate Sensors</p>
       </div>
     </div>
 
@@ -94,91 +95,116 @@ tailwind.config = {
 
 <!-- ================= TAB 1: OVERVIEW ================= -->
 <section id="tab-dashboard" class="tab-panel active space-y-6">
+
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
 
-    <!-- Humidity -->
+    <!-- Field score -->
+    <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-card hover:shadow-card-hover transition-all flex items-center gap-4">
+      <div class="relative w-24 h-24 shrink-0">
+        <svg viewBox="0 0 100 100" class="w-24 h-24 -rotate-90">
+          <circle cx="50" cy="50" r="42" fill="none" stroke-width="10" class="stroke-slate-100"></circle>
+          <circle id="gauge-arc" cx="50" cy="50" r="42" fill="none" stroke-width="10" stroke-linecap="round" class="gauge-arc stroke-slate-300" stroke-dasharray="263.9" stroke-dashoffset="263.9"></circle>
+        </svg>
+        <div class="absolute inset-0 flex flex-col items-center justify-center">
+          <span id="score-val" class="text-2xl font-black text-slate-900 leading-none">--</span>
+          <span class="text-[9px] font-bold text-slate-400 mt-0.5">/ 100</span>
+        </div>
+      </div>
+      <div class="min-w-0">
+        <div class="text-xs font-bold uppercase tracking-wider text-slate-400">Field Score</div>
+        <span id="score-badge" class="inline-block mt-1.5 text-xs font-bold px-2 py-0.5 rounded-full border bg-slate-100 text-slate-600 border-slate-200">Waiting for data</span>
+        <p id="score-note" class="text-[11px] text-slate-400 mt-1.5 leading-snug">Combines soil moisture, air humidity and temperature.</p>
+      </div>
+    </div>
+
+    <!-- Soil moisture -->
     <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-card hover:shadow-card-hover transition-all">
       <div class="flex items-center justify-between text-xs mb-3">
-        <span class="font-bold uppercase tracking-wider text-slate-400">Humidity (ESP32)</span>
-        <div class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-droplet text-sm"></i></div>
+        <span class="font-bold uppercase tracking-wider text-slate-400">Soil Moisture</span>
+        <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center"><i class="fa-solid fa-seedling text-sm"></i></div>
       </div>
       <div class="flex items-baseline gap-2 mb-2 flex-wrap">
-        <span id="hum-val" class="text-3xl font-black text-slate-900">--%</span>
-        <span id="hum-badge" class="text-xs font-bold px-2 py-0.5 rounded-full border bg-slate-100 text-slate-600 border-slate-200">Waiting for data</span>
+        <span id="soil-val" class="text-3xl font-black text-slate-900">--%</span>
+        <span id="soil-badge" class="text-xs font-bold px-2 py-0.5 rounded-full border bg-slate-100 text-slate-600 border-slate-200">No data</span>
       </div>
-      <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden"><div id="hum-bar" class="h-full bg-slate-300 rounded-full transition-all duration-500" style="width:0%"></div></div>
-      <p id="hum-note" class="text-[11px] text-slate-400 mt-2">No data from the ESP32 yet.</p>
+      <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden"><div id="soil-bar" class="h-full bg-slate-300 rounded-full transition-all duration-500" style="width:0%"></div></div>
+      <p id="soil-note" class="text-[11px] text-slate-400 mt-2">Capacitive soil sensor.</p>
+    </div>
+
+    <!-- Air humidity -->
+    <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-card hover:shadow-card-hover transition-all">
+      <div class="flex items-center justify-between text-xs mb-3">
+        <span class="font-bold uppercase tracking-wider text-slate-400">Air Humidity</span>
+        <div class="w-8 h-8 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center"><i class="fa-solid fa-droplet text-sm"></i></div>
+      </div>
+      <div class="flex items-baseline gap-2 mb-2 flex-wrap">
+        <span id="air-val" class="text-3xl font-black text-slate-900">--%</span>
+        <span id="air-badge" class="text-xs font-bold px-2 py-0.5 rounded-full border bg-slate-100 text-slate-600 border-slate-200">No data</span>
+      </div>
+      <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden"><div id="air-bar" class="h-full bg-slate-300 rounded-full transition-all duration-500" style="width:0%"></div></div>
+      <p id="air-note" class="text-[11px] text-slate-400 mt-2">DHT22 sensor.</p>
     </div>
 
     <!-- Temperature -->
     <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-card hover:shadow-card-hover transition-all">
       <div class="flex items-center justify-between text-xs mb-3">
-        <span class="font-bold uppercase tracking-wider text-slate-400">Temperature (ESP32)</span>
-        <div class="w-8 h-8 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center"><i class="fa-solid fa-temperature-half text-sm"></i></div>
+        <span class="font-bold uppercase tracking-wider text-slate-400">Temperature</span>
+        <div class="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center"><i class="fa-solid fa-temperature-half text-sm"></i></div>
       </div>
-      <div class="flex items-baseline gap-2 mb-2">
+      <div class="flex items-baseline gap-2 mb-2 flex-wrap">
         <span id="temp-val" class="text-3xl font-black text-slate-900">-- °C</span>
+        <span id="temp-badge" class="text-xs font-bold px-2 py-0.5 rounded-full border bg-slate-100 text-slate-600 border-slate-200">No data</span>
       </div>
-      <div id="temp-status" class="flex items-center gap-1.5 text-xs text-slate-500 font-bold"><i class="fa-solid fa-circle-question"></i><span>Waiting for data</span></div>
-      <p id="temp-range" class="text-[11px] text-slate-400 mt-2">Range of last 30 readings: -</p>
-    </div>
-
-    <!-- Satellite climate indices (static) -->
-    <div class="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-card hover:shadow-card-hover transition-all">
-      <div class="flex items-center justify-between text-xs mb-3">
-        <span class="font-bold uppercase tracking-wider text-slate-400">Climate Indices (MERRA-2)</span>
-        <div class="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center"><i class="fa-solid fa-satellite text-sm"></i></div>
-      </div>
-      <div class="grid grid-cols-2 gap-3 mb-2">
-        <div><div class="text-2xl font-black text-slate-900">4</div><div class="text-[11px] font-semibold text-slate-500">CDD (dry days)</div></div>
-        <div><div class="text-2xl font-black text-slate-900">3</div><div class="text-[11px] font-semibold text-slate-500">CWD (wet days)</div></div>
-      </div>
-      <p class="text-[11px] text-slate-400 mt-2">Static satellite data • statM_2d_edi_Nx</p>
-    </div>
-
-    <!-- Recommendation -->
-    <div class="bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-2xl p-5 shadow-card hover:shadow-card-hover transition-all flex flex-col justify-between">
-      <div>
-        <div class="flex items-center justify-between text-emerald-200 text-xs mb-2">
-          <span class="font-bold uppercase tracking-wider">Top Recommendation</span><i class="fa-solid fa-star text-sm"></i>
-        </div>
-        <div id="rec-main" class="text-2xl font-black tracking-tight">-</div>
-        <p id="rec-main-note" class="text-xs text-emerald-100 mt-1">-</p>
-      </div>
-      <button onclick="switchTab('recommendation')" class="mt-4 w-full bg-white/20 hover:bg-white/30 font-bold py-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
-        <span>View Rotation Timeline</span><i class="fa-solid fa-arrow-right text-[10px]"></i>
-      </button>
+      <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden"><div id="temp-bar" class="h-full bg-slate-300 rounded-full transition-all duration-500" style="width:0%"></div></div>
+      <p id="temp-note" class="text-[11px] text-slate-400 mt-2">Range of recent readings: -</p>
     </div>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 space-y-6">
 
-      <!-- Live trend -->
+      <!-- Score breakdown -->
+      <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-card">
+        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-5">
+          <div>
+            <h3 class="font-extrabold text-base text-slate-900">Field Score Breakdown</h3>
+            <p class="text-xs text-slate-500">Each reading gets a 0-100 sub-score, then a weighted average: soil 50%, temperature 30%, air humidity 20%.</p>
+          </div>
+          <span id="limit-factor" class="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full self-start whitespace-nowrap">-</span>
+        </div>
+        <div id="score-breakdown" class="space-y-4"></div>
+        <details class="mt-5 pt-4 border-t border-slate-100 text-xs text-slate-500">
+          <summary class="cursor-pointer font-bold text-slate-600">How the sub-scores are calculated</summary>
+          <div class="grid sm:grid-cols-3 gap-3 mt-3">
+            <div class="bg-slate-50 rounded-xl p-3"><div class="font-bold text-slate-700 mb-1">Soil moisture</div>100 at 60-80%.<br>Falls to 0 at 20% (dry).<br>Falls to 40 at 100% (waterlogged).</div>
+            <div class="bg-slate-50 rounded-xl p-3"><div class="font-bold text-slate-700 mb-1">Temperature</div>100 at 22-30 &deg;C.<br>Falls to 0 at 15 &deg;C (cold).<br>Falls to 0 at 40 &deg;C (heat stress).</div>
+            <div class="bg-slate-50 rounded-xl p-3"><div class="font-bold text-slate-700 mb-1">Air humidity</div>100 at 60-80%.<br>Falls to 20 at 30% (dry air).<br>Falls to 30 at 100% (fungal risk).</div>
+          </div>
+          <p class="mt-3">Grades: 85+ Excellent • 70-84 Good • 50-69 Fair • 30-49 Poor • below 30 Critical. A missing sensor is left out and the other weights are scaled up.</p>
+        </details>
+      </div>
+
+      <!-- Trend -->
       <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-card">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
           <div>
-            <h3 class="font-extrabold text-base text-slate-900">Real-time Humidity Trend</h3>
-            <p class="text-xs text-slate-500">Latest ESP32 readings compared against the optimal crop threshold.</p>
+            <h3 class="font-extrabold text-base text-slate-900">Real-time Trend</h3>
+            <p class="text-xs text-slate-500">Latest readings from the field sensor node.</p>
           </div>
-          <div class="flex items-center gap-3 text-xs font-semibold flex-wrap">
-            <span class="flex items-center gap-1.5 text-emerald-700"><span class="w-3 h-3 rounded bg-emerald-500"></span>Optimal (&ge;75%)</span>
-            <span class="flex items-center gap-1.5 text-amber-700"><span class="w-3 h-3 rounded bg-amber-400"></span>Dry</span>
-            <span class="flex items-center gap-1.5 text-blue-700"><span class="w-3 h-3 rounded bg-blue-500"></span>Saturated</span>
-          </div>
+          <div id="trend-tabs" class="flex flex-wrap gap-1.5"></div>
         </div>
-        <div id="trend-chart" class="h-48 bg-slate-50 border border-slate-100 rounded-xl p-4 flex items-end justify-between gap-1.5 sm:gap-3 relative"></div>
+        <div id="trend-chart" class="h-48 bg-slate-50 border border-slate-100 rounded-xl p-4 pr-28 flex items-end justify-between gap-1.5 sm:gap-3 relative"></div>
         <div class="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500 border-t border-slate-100 pt-3">
           <span><i class="fa-solid fa-circle-info text-emerald-500 mr-1"></i><span id="trend-note">Waiting for sensor data.</span></span>
           <span id="trend-status" class="font-bold text-slate-500">-</span>
         </div>
       </div>
 
-      <!-- Sensor log -->
+      <!-- Log -->
       <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-card">
         <div class="flex items-center justify-between mb-4">
           <div>
-            <h3 class="font-extrabold text-base text-slate-900">ESP32 Telemetry Log</h3>
+            <h3 class="font-extrabold text-base text-slate-900">Sensor Telemetry Log</h3>
             <p class="text-xs text-slate-500">10 most recent readings • auto-refreshes every 3 seconds</p>
           </div>
           <span id="log-count" class="text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">0 readings</span>
@@ -186,16 +212,38 @@ tailwind.config = {
         <div class="overflow-x-auto">
           <table class="w-full text-xs">
             <thead><tr class="text-left text-slate-400 uppercase tracking-wider text-[10px] border-b border-slate-100">
-              <th class="py-2 pr-4 font-bold">Time (WIB)</th><th class="py-2 pr-4 font-bold">Device</th><th class="py-2 pr-4 font-bold">Temp</th><th class="py-2 pr-4 font-bold">Humidity</th><th class="py-2 font-bold">Status</th>
+              <th class="py-2 pr-4 font-bold">Time (WIB)</th><th class="py-2 pr-4 font-bold">Device</th><th class="py-2 pr-4 font-bold">Soil</th><th class="py-2 pr-4 font-bold">Air Hum.</th><th class="py-2 pr-4 font-bold">Temp</th><th class="py-2 font-bold">Score</th>
             </tr></thead>
-            <tbody id="log-body"><tr><td colspan="5" class="py-6 text-center text-slate-400">No data received yet.</td></tr></tbody>
+            <tbody id="log-body"><tr><td colspan="6" class="py-6 text-center text-slate-400">No data received yet.</td></tr></tbody>
           </table>
         </div>
       </div>
     </div>
 
     <div class="space-y-6">
-      <!-- Active crop -->
+      <!-- Recommendation -->
+      <div class="bg-gradient-to-br from-emerald-600 to-teal-700 text-white rounded-2xl p-5 shadow-card">
+        <div class="flex items-center justify-between text-emerald-200 text-xs mb-2">
+          <span class="font-bold uppercase tracking-wider">Top Recommendation</span><i class="fa-solid fa-star text-sm"></i>
+        </div>
+        <div id="rec-main" class="text-2xl font-black tracking-tight">-</div>
+        <p id="rec-main-note" class="text-xs text-emerald-100 mt-1">-</p>
+        <button onclick="switchTab('recommendation')" class="mt-4 w-full bg-white/20 hover:bg-white/30 font-bold py-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+          <span>View Rotation Timeline</span><i class="fa-solid fa-arrow-right text-[10px]"></i>
+        </button>
+      </div>
+
+      <!-- Alerts -->
+      <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-card">
+        <h3 class="font-extrabold text-base text-slate-900 mb-3">Field Condition Alerts</h3>
+        <div id="alerts" class="space-y-3"></div>
+        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+          <span class="text-slate-400">Last reading:</span>
+          <span id="last-feed" class="font-bold text-slate-700">-</span>
+        </div>
+      </div>
+
+      <!-- Current crop -->
       <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-card">
         <div class="flex items-center justify-between mb-4">
           <h3 class="font-extrabold text-base text-slate-900">Current Crop</h3>
@@ -215,14 +263,17 @@ tailwind.config = {
         </div>
       </div>
 
-      <!-- Dynamic alerts -->
-      <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-card">
-        <h3 class="font-extrabold text-base text-slate-900 mb-3">Field Condition Alerts</h3>
-        <div id="alerts" class="space-y-3"></div>
-        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-          <span class="text-slate-400">Last reading:</span>
-          <span id="last-feed" class="font-bold text-slate-700">-</span>
+      <!-- Satellite (static) -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-card">
+        <div class="flex items-center justify-between text-xs mb-3">
+          <span class="font-bold uppercase tracking-wider text-slate-400">Climate Indices (MERRA-2)</span>
+          <div class="w-8 h-8 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center"><i class="fa-solid fa-satellite text-sm"></i></div>
         </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><div class="text-2xl font-black text-slate-900">4</div><div class="text-[11px] font-semibold text-slate-500">CDD (dry days)</div></div>
+          <div><div class="text-2xl font-black text-slate-900">3</div><div class="text-[11px] font-semibold text-slate-500">CWD (wet days)</div></div>
+        </div>
+        <p class="text-[11px] text-slate-400 mt-2">Static satellite data • statM_2d_edi_Nx</p>
       </div>
     </div>
   </div>
@@ -233,16 +284,18 @@ tailwind.config = {
   <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-card">
     <div class="mb-4">
       <h2 class="text-lg font-extrabold text-slate-900">Field Map</h2>
-      <p class="text-xs text-slate-500">Active field location with humidity status from the ESP32 sensor.</p>
+      <p class="text-xs text-slate-500">Active field location, colored by the current field score.</p>
     </div>
     <div class="h-[460px] map-grid-bg rounded-2xl border border-slate-200 relative overflow-hidden flex items-center justify-center shadow-inner">
       <div class="absolute inset-0 bg-[linear-gradient(to_right,#0596691a_1px,transparent_1px),linear-gradient(to_bottom,#0596691a_1px,transparent_1px)] bg-[size:40px_40px]"></div>
 
-      <div class="absolute top-4 left-4 bg-white/95 p-3.5 rounded-2xl border border-slate-200 shadow-md text-xs space-y-1.5 max-w-[240px] z-20">
-        <div class="font-extrabold text-slate-800 flex items-center gap-1.5"><i class="fa-solid fa-microchip text-emerald-600"></i>Field Sensor</div>
+      <div class="absolute top-4 left-4 bg-white/95 p-3.5 rounded-2xl border border-slate-200 shadow-md text-xs space-y-1.5 max-w-[250px] z-20">
+        <div class="font-extrabold text-slate-800 flex items-center gap-1.5"><i class="fa-solid fa-microchip text-emerald-600"></i>Field Sensor Node</div>
         <div class="text-[11px] text-slate-500 leading-snug">
           Device: <span id="map-device" class="font-semibold text-slate-700">-</span><br>
-          Humidity: <span id="map-hum" class="font-semibold text-slate-700">-</span><br>
+          Field score: <span id="map-score" class="font-semibold text-slate-700">-</span><br>
+          Soil moisture: <span id="map-soil" class="font-semibold text-slate-700">-</span><br>
+          Air humidity: <span id="map-air" class="font-semibold text-slate-700">-</span><br>
           Temperature: <span id="map-temp" class="font-semibold text-slate-700">-</span>
         </div>
       </div>
@@ -257,11 +310,12 @@ tailwind.config = {
 
       <div class="absolute bottom-4 left-4 right-4 bg-white/95 p-3.5 rounded-2xl border border-slate-200 shadow-md flex flex-wrap items-center justify-between gap-3 z-20">
         <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold">
-          <span class="text-slate-500 font-bold uppercase text-[10px] tracking-wider">Legend:</span>
-          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500"></span>Optimal (75-95%)</span>
-          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-400"></span>Dry (40-75%)</span>
-          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-500"></span>Saturated (&gt;95%)</span>
-          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-500"></span>Critical (&lt;40%)</span>
+          <span class="text-slate-500 font-bold uppercase text-[10px] tracking-wider">Field score:</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500"></span>Excellent (85+)</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-lime-500"></span>Good (70-84)</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-yellow-400"></span>Fair (50-69)</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500"></span>Poor (30-49)</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-500"></span>Critical (&lt;30)</span>
         </div>
         <button onclick="switchTab('parameters')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition">Use This Location <i class="fa-solid fa-arrow-right ml-1"></i></button>
       </div>
@@ -326,7 +380,7 @@ tailwind.config = {
 
 <footer class="bg-white border-t border-slate-200 mt-12 py-6 text-xs text-slate-500">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
-    <div><span class="font-extrabold text-slate-800">TerraTech DSS</span> • ESP32 Sensor + NASA MERRA-2 Satellite Data</div>
+    <div><span class="font-extrabold text-slate-800">TerraTech DSS</span> • ESP32 Soil &amp; Climate Sensors + NASA MERRA-2 Satellite Data</div>
     <div>Target Region: Lampung Province, Indonesia</div>
   </div>
 </footer>
@@ -336,14 +390,16 @@ var API = '/api/sensor';
 var POLL_MS = 3000;
 var ONLINE_WINDOW_S = 60;
 
+// ---------- scoring configuration (edit to tune) ----------
+var WEIGHTS = { soil: 0.5, temp: 0.3, air: 0.2 };
+
 var REGIONS = {
-  kalianda:  { label: 'Kalianda, South Lampung', short: 'Kalianda',   lat: -5.722, lon: 105.589 },
-  metro:     { label: 'West Metro, Metro City',  short: 'West Metro', lat: -5.117, lon: 105.300 },
-  pringsewu: { label: 'Pringsewu, Pringsewu',    short: 'Pringsewu',  lat: -5.358, lon: 104.974 },
-  natar:     { label: 'Natar, South Lampung',    short: 'Natar',      lat: -5.315, lon: 105.205 }
+  kalianda:  { short: 'Kalianda',   lat: -5.722, lon: 105.589 },
+  metro:     { short: 'West Metro', lat: -5.117, lon: 105.300 },
+  pringsewu: { short: 'Pringsewu',  lat: -5.358, lon: 104.974 },
+  natar:     { short: 'Natar',      lat: -5.315, lon: 105.205 }
 };
 
-// Crop traits used by the rotation rule engine
 var CROPS = {
   Terong: { nama: 'Eggplant', latin: 'Solanum melongena', famili: 'Solanaceae', akar: 'deep', akarCm: '40 - 60 cm', hari: [90, 120], air: 'medium', tahanKering: false, tahanPanas: true, beratHara: true, legum: false, icon: 'fa-seedling', ket: 'Deep Roots • Heavy Feeder' },
   Sawi:   { nama: 'Mustard Greens', latin: 'Brassica rapa', famili: 'Brassicaceae', akar: 'shallow', akarCm: '10 - 20 cm', hari: [30, 40], air: 'medium', tahanKering: false, tahanPanas: false, beratHara: false, legum: false, icon: 'fa-leaf', ket: 'Shallow Roots • Fast Harvest' },
@@ -355,19 +411,34 @@ var CROPS = {
 };
 
 var PRIORITIES = [
-  { key: 'air',   icon: 'fa-droplet',     title: 'Water Efficiency',       desc: 'Favor drought-tolerant crops when sensor humidity drops.' },
-  { key: 'cepat', icon: 'fa-bolt',        title: 'Fast Harvest',           desc: 'Favor crops that can be harvested in under 45 days.' },
+  { key: 'air',   icon: 'fa-droplet',     title: 'Water Efficiency',        desc: 'Favor drought-tolerant crops when soil moisture drops.' },
+  { key: 'cepat', icon: 'fa-bolt',        title: 'Fast Harvest',            desc: 'Favor crops that can be harvested in under 45 days.' },
   { key: 'tanah', icon: 'fa-arrows-spin', title: 'Soil Health & Structure', desc: 'Alternate root depth and plant family, and add nitrogen-fixing legumes.' }
 ];
 
 var AIR_LABEL = { low: 'Low', medium: 'Medium', high: 'High' };
 
-var state = { logs: [], crop: 'Terong', pr: { air: true, cepat: false, tanah: true }, region: 'kalianda', error: false };
+var TONE = {
+  slate:   { badge: 'bg-slate-100 text-slate-600 border-slate-200', bar: 'bg-slate-300', pin: 'bg-slate-500', ring: 'bg-slate-400/20', text: 'text-slate-500', stroke: 'stroke-slate-300' },
+  red:     { badge: 'bg-red-50 text-red-700 border-red-200', bar: 'bg-red-500', pin: 'bg-red-600', ring: 'bg-red-500/20', text: 'text-red-700', stroke: 'stroke-red-500' },
+  amber:   { badge: 'bg-amber-50 text-amber-700 border-amber-200', bar: 'bg-amber-500', pin: 'bg-amber-500', ring: 'bg-amber-400/20', text: 'text-amber-700', stroke: 'stroke-amber-500' },
+  yellow:  { badge: 'bg-yellow-50 text-yellow-700 border-yellow-200', bar: 'bg-yellow-400', pin: 'bg-yellow-500', ring: 'bg-yellow-400/20', text: 'text-yellow-700', stroke: 'stroke-yellow-400' },
+  lime:    { badge: 'bg-lime-50 text-lime-700 border-lime-200', bar: 'bg-lime-500', pin: 'bg-lime-600', ring: 'bg-lime-500/20', text: 'text-lime-700', stroke: 'stroke-lime-500' },
+  emerald: { badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', bar: 'bg-emerald-500', pin: 'bg-emerald-600', ring: 'bg-emerald-500/20', text: 'text-emerald-700', stroke: 'stroke-emerald-500' },
+  sky:     { badge: 'bg-sky-50 text-sky-700 border-sky-200', bar: 'bg-sky-500', pin: 'bg-sky-600', ring: 'bg-sky-500/20', text: 'text-sky-700', stroke: 'stroke-sky-500' },
+  blue:    { badge: 'bg-blue-50 text-blue-700 border-blue-200', bar: 'bg-blue-600', pin: 'bg-blue-700', ring: 'bg-blue-500/20', text: 'text-blue-700', stroke: 'stroke-blue-600' }
+};
+
+var state = { logs: [], crop: 'Terong', pr: { air: true, cepat: false, tanah: true }, region: 'kalianda', error: false, trend: null };
 
 // ---------- utils ----------
 function $(id) { return document.getElementById(id); }
 function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-function fmt(v) { return Math.round(Number(v) * 10) / 10; }
+function has(v) { return v !== null && v !== undefined && !isNaN(v); }
+function num(v) { return has(v) ? Number(v) : null; }
+function fmt(v) { return has(v) ? Math.round(Number(v) * 10) / 10 : '-'; }
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function lerp(x, x0, x1, y0, y1) { return y0 + (y1 - y0) * (x - x0) / (x1 - x0); }
 function latest() { return state.logs.length ? state.logs[0] : null; }
 function ageSeconds(r) { var t = r.ts || r.id; return t ? Math.max(0, Math.round((Date.now() - t) / 1000)) : null; }
 function ageText(s) {
@@ -377,24 +448,80 @@ function ageText(s) {
   return Math.floor(s / 3600) + ' h ago';
 }
 
-function moistStatus(h) {
-  if (h == null) return { label: 'Waiting for data', badge: 'bg-slate-100 text-slate-600 border-slate-200', bar: 'bg-slate-300', pin: 'bg-slate-500', ring: 'bg-slate-400/20', text: 'text-slate-500', skor: '-', note: 'No data from the ESP32 yet.' };
-  if (h > 95)  return { label: 'Saturated', badge: 'bg-blue-50 text-blue-700 border-blue-200', bar: 'bg-blue-500', pin: 'bg-blue-600', ring: 'bg-blue-500/20', text: 'text-blue-700', skor: 3, note: 'Waterlogging risk; make sure drainage is clear.' };
-  if (h >= 75) return { label: 'Optimal', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', bar: 'bg-emerald-500', pin: 'bg-emerald-600', ring: 'bg-emerald-500/20', text: 'text-emerald-700', skor: 5, note: 'Enough for leafy greens without intensive irrigation.' };
-  if (h >= 60) return { label: 'Adequate', badge: 'bg-lime-50 text-lime-700 border-lime-200', bar: 'bg-lime-500', pin: 'bg-lime-600', ring: 'bg-lime-500/20', text: 'text-lime-700', skor: 4, note: 'Still suitable for planting; monitor irrigation needs.' };
-  if (h >= 40) return { label: 'Slightly Dry', badge: 'bg-amber-50 text-amber-700 border-amber-200', bar: 'bg-amber-400', pin: 'bg-amber-500', ring: 'bg-amber-400/20', text: 'text-amber-700', skor: 3, note: 'Consider drought-tolerant crops or extra irrigation.' };
-  return { label: 'Critically Dry', badge: 'bg-red-50 text-red-700 border-red-200', bar: 'bg-red-500', pin: 'bg-red-600', ring: 'bg-red-500/20', text: 'text-red-700', skor: 1, note: 'Irrigate before planting.' };
+// ---------- status per reading ----------
+function soilStatus(v) {
+  if (!has(v)) return { label: 'No data', tone: 'slate', note: 'No soil sensor data. Set USE_SOIL_SENSOR to 1 on the ESP32.' };
+  if (v < 20) return { label: 'Critically Dry', tone: 'red', note: 'Root zone is dry. Irrigate before planting.' };
+  if (v < 40) return { label: 'Dry', tone: 'amber', note: 'Irrigation needed for most crops.' };
+  if (v < 60) return { label: 'Slightly Dry', tone: 'yellow', note: 'Plantable; drought-tolerant crops do best.' };
+  if (v <= 80) return { label: 'Optimal', tone: 'emerald', note: 'Ideal root-zone moisture for planting.' };
+  if (v <= 90) return { label: 'Wet', tone: 'sky', note: 'Moist soil; avoid extra irrigation.' };
+  return { label: 'Saturated', tone: 'blue', note: 'Waterlogging risk; check drainage.' };
+}
+function airStatus(v) {
+  if (!has(v)) return { label: 'No data', tone: 'slate', note: 'No DHT22 humidity data.' };
+  if (v < 40) return { label: 'Very Dry Air', tone: 'amber', note: 'High evaporation; soil dries out fast.' };
+  if (v < 60) return { label: 'Dry Air', tone: 'yellow', note: 'Moderate evaporation.' };
+  if (v <= 80) return { label: 'Ideal', tone: 'emerald', note: 'Comfortable range for most crops.' };
+  if (v <= 90) return { label: 'Humid', tone: 'sky', note: 'Watch for fungal leaf disease.' };
+  return { label: 'Very Humid', tone: 'blue', note: 'High fungal disease risk; improve air flow.' };
+}
+function tempStatus(v) {
+  if (!has(v)) return { label: 'No data', tone: 'slate', note: 'No DHT22 temperature data.' };
+  if (v < 15) return { label: 'Cold', tone: 'blue', note: 'Too cold for most tropical crops.' };
+  if (v < 22) return { label: 'Cool', tone: 'sky', note: 'Growth slows below 22 °C.' };
+  if (v <= 30) return { label: 'Ideal', tone: 'emerald', note: 'Ideal tropical growing range.' };
+  if (v <= 35) return { label: 'Hot', tone: 'amber', note: 'Leafy greens may wilt.' };
+  return { label: 'Extreme Heat', tone: 'red', note: 'Heat stress; add shade and water.' };
 }
 
-function tempStatus(t) {
-  if (t == null) return { label: 'Waiting for data', cls: 'text-slate-500', icon: 'fa-circle-question' };
-  if (t > 35) return { label: 'Extreme Heat', cls: 'text-red-600', icon: 'fa-fire' };
-  if (t > 32) return { label: 'Hot', cls: 'text-amber-600', icon: 'fa-sun' };
-  if (t < 18) return { label: 'Cold', cls: 'text-blue-600', icon: 'fa-snowflake' };
-  return { label: 'Normal (ideal tropical)', cls: 'text-emerald-600', icon: 'fa-circle-check' };
+// ---------- sub-scores (0-100) ----------
+function scoreSoil(v) {
+  if (!has(v)) return null;
+  if (v <= 20) return 0;
+  if (v < 60) return lerp(v, 20, 60, 0, 100);
+  if (v <= 80) return 100;
+  return lerp(clamp(v, 80, 100), 80, 100, 100, 40);
+}
+function scoreAir(v) {
+  if (!has(v)) return null;
+  if (v <= 30) return 20;
+  if (v < 60) return lerp(v, 30, 60, 20, 100);
+  if (v <= 80) return 100;
+  return lerp(clamp(v, 80, 100), 80, 100, 100, 30);
+}
+function scoreTemp(v) {
+  if (!has(v)) return null;
+  if (v <= 15 || v >= 40) return 0;
+  if (v < 22) return lerp(v, 15, 22, 0, 100);
+  if (v <= 30) return 100;
+  return lerp(v, 30, 40, 100, 0);
+}
+function grade(s) {
+  if (s == null) return { label: 'Waiting for data', tone: 'slate' };
+  if (s >= 85) return { label: 'Excellent', tone: 'emerald' };
+  if (s >= 70) return { label: 'Good', tone: 'lime' };
+  if (s >= 50) return { label: 'Fair', tone: 'yellow' };
+  if (s >= 30) return { label: 'Poor', tone: 'amber' };
+  return { label: 'Critical', tone: 'red' };
+}
+function fieldScore(r) {
+  var parts = [
+    { key: 'soil', label: 'Soil Moisture', icon: 'fa-seedling',        v: r ? num(r.soil) : null,       unit: '%',   s: scoreSoil(r ? num(r.soil) : null),       w: WEIGHTS.soil, st: soilStatus(r ? num(r.soil) : null) },
+    { key: 'temp', label: 'Temperature',   icon: 'fa-temperature-half', v: r ? num(r.suhu) : null,       unit: ' °C', s: scoreTemp(r ? num(r.suhu) : null),       w: WEIGHTS.temp, st: tempStatus(r ? num(r.suhu) : null) },
+    { key: 'air',  label: 'Air Humidity',  icon: 'fa-droplet',          v: r ? num(r.kelembapan) : null, unit: '%',   s: scoreAir(r ? num(r.kelembapan) : null),  w: WEIGHTS.air,  st: airStatus(r ? num(r.kelembapan) : null) }
+  ];
+  var wSum = 0, total = 0, count = 0;
+  parts.forEach(function (p) { if (p.s != null) { wSum += p.w; total += p.s * p.w; count++; } });
+  var score = wSum > 0 ? Math.round(total / wSum) : null;
+  parts.forEach(function (p) { p.effW = (p.s != null && wSum > 0) ? p.w / wSum : 0; });
+  var limiting = null;
+  parts.forEach(function (p) { if (p.s != null && p.s < 100 && (!limiting || p.s < limiting.s)) limiting = p; });
+  return { score: score, grade: grade(score), parts: parts, limiting: limiting, count: count, partial: count > 0 && count < parts.length };
 }
 
 // ---------- rotation rule engine ----------
+// Water context uses soil moisture when available, otherwise air humidity.
 function scoreCrop(c, prev, ctx) {
   var s = 0, alasan = [];
   if (c.famili === prev.famili) { s -= 10; }
@@ -406,14 +533,18 @@ function scoreCrop(c, prev, ctx) {
     if (c.hari[1] <= 45) { s += 3; alasan.push('Fast harvest (' + c.hari[0] + '-' + c.hari[1] + ' days) for quick capital turnover.'); }
     else s -= 1;
   }
-  if (ctx.h != null) {
-    if (ctx.h < 60) {
-      if (c.tahanKering) { s += ctx.pr.air ? 3 : 1; alasan.push('Drought tolerant, suited to the current sensor humidity of ' + fmt(ctx.h) + '%.'); }
+  var srcLabel = ctx.wSrc === 'soil' ? 'soil moisture' : 'air humidity';
+  if (ctx.w != null) {
+    if (ctx.w < 40) {
+      if (c.tahanKering) { s += ctx.pr.air ? 3 : 1; alasan.push('Drought tolerant, suited to the current ' + srcLabel + ' of ' + fmt(ctx.w) + '%.'); }
       if (c.air === 'high') s -= ctx.pr.air ? 3 : 1;
-    } else if (ctx.h <= 95) {
-      if (c.air !== 'low') { s += 1; alasan.push('Sensor humidity of ' + fmt(ctx.h) + '% is enough without intensive irrigation.'); }
-    } else if (c.air === 'high') {
-      s += 1;
+    } else if (ctx.w < 60) {
+      if (c.tahanKering) { s += ctx.pr.air ? 2 : 1; alasan.push('Handles the slightly dry ' + srcLabel + ' (' + fmt(ctx.w) + '%) with little irrigation.'); }
+      if (c.air === 'high') s -= 1;
+    } else if (ctx.w <= 90) {
+      if (c.air !== 'low') { s += 1; alasan.push('Current ' + srcLabel + ' of ' + fmt(ctx.w) + '% supports it without intensive irrigation.'); }
+    } else {
+      if (c.tahanKering) s -= 1;
     }
   } else if (ctx.pr.air && c.tahanKering) {
     s += 1;
@@ -425,13 +556,20 @@ function scoreCrop(c, prev, ctx) {
   return { s: s, alasan: alasan };
 }
 
+function waterContext(r) {
+  if (r && has(r.soil)) return { w: Number(r.soil), wSrc: 'soil' };
+  if (r && has(r.kelembapan)) return { w: Number(r.kelembapan), wSrc: 'air' };
+  return { w: null, wSrc: null };
+}
+
 function buildPlan() {
   var prev = CROPS[state.crop];
   var used = {}; used[state.crop] = true;
   var last = latest();
+  var wc = waterContext(last);
   var plan = [];
   for (var i = 0; i < 3; i++) {
-    var ctx = { pr: state.pr, h: (i === 0 && last) ? last.kelembapan : null, t: (i === 0 && last) ? last.suhu : null };
+    var ctx = { pr: state.pr, w: i === 0 ? wc.w : null, wSrc: wc.wSrc, t: (i === 0 && last) ? num(last.suhu) : null };
     var best = null;
     Object.keys(CROPS).forEach(function (k) {
       if (used[k]) return;
@@ -445,7 +583,17 @@ function buildPlan() {
   return plan;
 }
 
-// ---------- render ----------
+// ---------- render: live ----------
+function setMetric(prefix, value, unit, status, barPct, note) {
+  var t = TONE[status.tone];
+  $(prefix + '-val').textContent = has(value) ? fmt(value) + unit : '--' + unit;
+  $(prefix + '-badge').className = 'text-xs font-bold px-2 py-0.5 rounded-full border ' + t.badge;
+  $(prefix + '-badge').textContent = status.label;
+  $(prefix + '-bar').className = 'h-full rounded-full transition-all duration-500 ' + t.bar;
+  $(prefix + '-bar').style.width = (has(value) ? clamp(barPct, 0, 100) : 0) + '%';
+  $(prefix + '-note').textContent = note;
+}
+
 function renderLive() {
   var last = latest();
   var age = last ? ageSeconds(last) : null;
@@ -456,89 +604,139 @@ function renderLive() {
   $('live-label').textContent = state.error ? 'Server unreachable' : (online ? 'ESP32 Live' : (last ? 'ESP32 Offline' : 'Waiting for ESP32'));
   $('live-device').textContent = last ? last.device_id + ' • ' + ageText(age) : '';
 
-  var h = last ? last.kelembapan : null;
-  var t = last ? last.suhu : null;
-  var ms = moistStatus(h);
-  $('hum-val').textContent = h == null ? '--%' : fmt(h) + '%';
-  $('hum-badge').className = 'text-xs font-bold px-2 py-0.5 rounded-full border ' + ms.badge;
-  $('hum-badge').textContent = h == null ? ms.label : ms.label + ' (Score ' + ms.skor + ')';
-  $('hum-bar').className = 'h-full rounded-full transition-all duration-500 ' + ms.bar;
-  $('hum-bar').style.width = (h == null ? 0 : Math.max(0, Math.min(100, h))) + '%';
-  $('hum-note').textContent = ms.note;
+  var soil = last ? num(last.soil) : null;
+  var air = last ? num(last.kelembapan) : null;
+  var temp = last ? num(last.suhu) : null;
 
-  var ts = tempStatus(t);
-  $('temp-val').textContent = t == null ? '-- °C' : fmt(t) + ' °C';
-  $('temp-status').className = 'flex items-center gap-1.5 text-xs font-bold ' + ts.cls;
-  $('temp-status').innerHTML = '<i class="fa-solid ' + ts.icon + '"></i><span>' + ts.label + '</span>';
-  if (state.logs.length) {
-    var temps = state.logs.map(function (r) { return r.suhu; });
-    $('temp-range').textContent = 'Range of last ' + state.logs.length + ' readings: ' + fmt(Math.min.apply(null, temps)) + ' - ' + fmt(Math.max.apply(null, temps)) + ' °C';
-  } else {
-    $('temp-range').textContent = 'Range of last 30 readings: -';
-  }
+  var ss = soilStatus(soil), as = airStatus(air), ts = tempStatus(temp);
+  setMetric('soil', soil, '%', ss, soil, ss.note + (last && has(last.soil_raw) ? ' (raw ' + last.soil_raw + ')' : ''));
+  setMetric('air', air, '%', as, air, as.note);
+  var temps = state.logs.map(function (r) { return num(r.suhu); }).filter(has);
+  setMetric('temp', temp, ' °C', ts, has(temp) ? temp / 45 * 100 : 0,
+    temps.length ? 'Range of last ' + temps.length + ': ' + fmt(Math.min.apply(null, temps)) + ' - ' + fmt(Math.max.apply(null, temps)) + ' °C' : ts.note);
+
+  var fs = fieldScore(last);
+  renderScore(fs);
 
   $('last-feed').textContent = last ? last.waktu + ' WIB (' + ageText(age) + ')' : '-';
 
   // Map
+  var gt = TONE[fs.grade.tone];
   $('map-device').textContent = last ? last.device_id : '-';
-  $('map-hum').textContent = h == null ? '-' : fmt(h) + '% (' + ms.label + ')';
-  $('map-temp').textContent = t == null ? '-' : fmt(t) + ' °C';
-  $('map-pin').className = 'w-12 h-12 rounded-2xl text-white shadow-xl flex items-center justify-center text-xl ' + ms.pin;
-  $('map-ring').className = 'absolute w-32 h-32 rounded-full radar-ping ' + ms.ring;
+  $('map-score').textContent = fs.score == null ? '-' : fs.score + ' (' + fs.grade.label + ')';
+  $('map-soil').textContent = has(soil) ? fmt(soil) + '% (' + ss.label + ')' : '-';
+  $('map-air').textContent = has(air) ? fmt(air) + '% (' + as.label + ')' : '-';
+  $('map-temp').textContent = has(temp) ? fmt(temp) + ' °C (' + ts.label + ')' : '-';
+  $('map-pin').className = 'w-12 h-12 rounded-2xl text-white shadow-xl flex items-center justify-center text-xl ' + gt.pin;
+  $('map-ring').className = 'absolute w-32 h-32 rounded-full radar-ping ' + gt.ring;
 
   renderTrend();
   renderLog();
-  renderAlerts(h, t, online, last);
+  renderAlerts(soil, air, temp, online, last, fs);
 }
 
+function renderScore(fs) {
+  var t = TONE[fs.grade.tone];
+  var C = 263.9;
+  $('score-val').textContent = fs.score == null ? '--' : fs.score;
+  $('gauge-arc').setAttribute('class', 'gauge-arc ' + t.stroke);
+  $('gauge-arc').setAttribute('stroke-dashoffset', fs.score == null ? C : C * (1 - fs.score / 100));
+  $('score-badge').className = 'inline-block mt-1.5 text-xs font-bold px-2 py-0.5 rounded-full border ' + t.badge;
+  $('score-badge').textContent = fs.grade.label;
+  $('score-note').textContent = fs.score == null ? 'Combines soil moisture, air humidity and temperature.'
+    : (fs.partial ? 'Partial: based on ' + fs.count + ' of 3 sensors. ' : '') + (fs.limiting ? 'Held back by ' + fs.limiting.label.toLowerCase() + ' (' + fs.limiting.st.label.toLowerCase() + ').' : 'All readings in the ideal range.');
+
+  $('limit-factor').textContent = fs.score == null ? '-' : (fs.limiting ? 'Limiting factor: ' + fs.limiting.label : 'No limiting factor');
+
+  $('score-breakdown').innerHTML = fs.parts.map(function (p) {
+    var pt = TONE[p.st.tone];
+    if (p.s == null) {
+      return '<div class="flex items-center gap-3 opacity-60"><div class="w-9 h-9 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0"><i class="fa-solid ' + p.icon + '"></i></div>' +
+        '<div class="flex-grow"><div class="flex justify-between text-xs"><span class="font-bold text-slate-700">' + p.label + '</span><span class="text-slate-400">Not reported • weight ' + Math.round(p.w * 100) + '%</span></div>' +
+        '<div class="w-full h-2 bg-slate-100 rounded-full mt-1.5"></div></div></div>';
+    }
+    return '<div class="flex items-center gap-3"><div class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ' + pt.badge + ' border"><i class="fa-solid ' + p.icon + '"></i></div>' +
+      '<div class="flex-grow min-w-0"><div class="flex flex-wrap justify-between gap-x-3 text-xs">' +
+      '<span><span class="font-bold text-slate-800">' + p.label + '</span> <span class="text-slate-500">' + fmt(p.v) + p.unit + ' • ' + p.st.label + '</span></span>' +
+      '<span class="text-slate-500"><span class="font-black text-slate-900">' + Math.round(p.s) + '</span>/100 &times; ' + Math.round(p.effW * 100) + '% = <span class="font-bold text-slate-800">' + fmt(p.s * p.effW) + '</span> pts</span></div>' +
+      '<div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden mt-1.5"><div class="h-full rounded-full transition-all duration-500 ' + pt.bar + '" style="width:' + Math.round(p.s) + '%"></div></div></div></div>';
+  }).join('');
+}
+
+// ---------- render: trend ----------
+var TRENDS = {
+  soil:  { label: 'Soil', unit: '%', max: 100, line: 60, lineLabel: 'Optimal from 60%', get: function (r) { return num(r.soil); }, status: soilStatus },
+  air:   { label: 'Air Hum.', unit: '%', max: 100, line: 60, lineLabel: 'Ideal from 60%', get: function (r) { return num(r.kelembapan); }, status: airStatus },
+  temp:  { label: 'Temp', unit: '°', max: 45, line: 30, lineLabel: 'Ideal max 30 °C', get: function (r) { return num(r.suhu); }, status: tempStatus },
+  score: { label: 'Score', unit: '', max: 100, line: 70, lineLabel: 'Good from 70', get: function (r) { return fieldScore(r).score; }, status: function (v) { return grade(v); } }
+};
+
+function setTrend(k) { state.trend = k; try { localStorage.setItem('terratech-trend', k); } catch (e) {} renderTrend(); }
+
 function renderTrend() {
+  if (!state.trend && state.logs.length) state.trend = state.logs.some(function (r) { return has(r.soil); }) ? 'soil' : 'air';
+  if (!state.trend) state.trend = 'soil';
+  var cfg = TRENDS[state.trend];
+
+  $('trend-tabs').innerHTML = Object.keys(TRENDS).map(function (k) {
+    var on = k === state.trend;
+    return '<button onclick="setTrend(\'' + k + '\')" class="px-3 py-1.5 rounded-lg text-xs font-bold transition ' + (on ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200') + '">' + TRENDS[k].label + '</button>';
+  }).join('');
+
   var box = $('trend-chart');
   var n = window.innerWidth < 640 ? 6 : 12;
-  var data = state.logs.slice(0, n).reverse();
+  var data = state.logs.slice(0, n).reverse().map(function (r) { return { r: r, v: cfg.get(r) }; }).filter(function (d) { return has(d.v); });
   if (!data.length) {
-    box.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-xs text-slate-400"><i class="fa-solid fa-satellite-dish mr-2"></i>Waiting for sensor data...</div>';
+    box.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-xs text-slate-400"><i class="fa-solid fa-satellite-dish mr-2"></i>No ' + cfg.label.toLowerCase() + ' data yet...</div>';
     $('trend-note').textContent = 'Waiting for sensor data.';
     $('trend-status').textContent = '-';
     $('trend-status').className = 'font-bold text-slate-500';
     return;
   }
   var BAR_MAX = 110;
-  var html = '<div class="absolute left-4 right-4 border-b border-dashed border-emerald-400 z-0 flex justify-end" style="bottom:' + (32 + 0.75 * BAR_MAX) + 'px"><span class="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded -translate-y-2">Optimal Threshold (75%)</span></div>';
-  data.forEach(function (r, i) {
+  var html = '<div class="absolute left-4 right-4 border-b border-dashed border-emerald-400 z-0 flex justify-end" style="bottom:' + (32 + cfg.line / cfg.max * BAR_MAX) + 'px"><span class="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded -translate-y-2">' + cfg.lineLabel + '</span></div>';
+  data.forEach(function (d, i) {
     var isLast = i === data.length - 1;
-    var hgt = Math.max(4, Math.min(100, r.kelembapan)) / 100 * BAR_MAX;
-    var st = moistStatus(r.kelembapan);
+    var hgt = Math.max(4, clamp(d.v, 0, cfg.max) / cfg.max * BAR_MAX);
+    var t = TONE[cfg.status(d.v).tone];
     html += '<div class="flex flex-col items-center justify-end gap-1 flex-1 h-full z-10 min-w-0">' +
-      '<span class="text-[10px] font-bold ' + (isLast ? 'text-emerald-800 bg-emerald-100 px-1 rounded' : 'text-slate-500') + '">' + fmt(r.kelembapan) + '%</span>' +
-      '<div class="w-full max-w-[40px] rounded-t-lg transition-all ' + st.bar + (isLast ? ' shadow-md' : '') + '" style="height:' + hgt + 'px" title="' + esc(r.waktu) + ' • ' + fmt(r.suhu) + ' °C"></div>' +
-      '<span class="text-[9px] font-semibold ' + (isLast ? 'text-emerald-800' : 'text-slate-400') + ' truncate max-w-full">' + esc(String(r.waktu).slice(0, 5)) + '</span></div>';
+      '<span class="text-[10px] font-bold ' + (isLast ? 'text-emerald-800 bg-emerald-100 px-1 rounded' : 'text-slate-500') + '">' + fmt(d.v) + cfg.unit + '</span>' +
+      '<div class="w-full max-w-[40px] rounded-t-lg transition-all ' + t.bar + (isLast ? ' shadow-md' : '') + '" style="height:' + hgt + 'px" title="' + esc(d.r.waktu) + '"></div>' +
+      '<span class="text-[9px] font-semibold ' + (isLast ? 'text-emerald-800' : 'text-slate-400') + ' truncate max-w-full">' + esc(String(d.r.waktu).slice(0, 5)) + '</span></div>';
   });
   box.innerHTML = html;
 
-  var avg = data.reduce(function (a, r) { return a + r.kelembapan; }, 0) / data.length;
-  var diff = data.length > 1 ? data[data.length - 1].kelembapan - data[0].kelembapan : 0;
-  var arah = Math.abs(diff) < 1 ? 'stable' : (diff > 0 ? 'up ' + fmt(diff) + ' pts' : 'down ' + fmt(Math.abs(diff)) + ' pts');
-  var ms = moistStatus(avg);
-  $('trend-note').textContent = 'Average of ' + data.length + ' readings: ' + fmt(avg) + '%, trend ' + arah + '.';
-  $('trend-status').textContent = 'Status: ' + ms.label;
-  $('trend-status').className = 'font-bold ' + ms.text;
+  var avg = data.reduce(function (a, d) { return a + d.v; }, 0) / data.length;
+  var diff = data.length > 1 ? data[data.length - 1].v - data[0].v : 0;
+  var arah = Math.abs(diff) < 1 ? 'stable' : (diff > 0 ? 'up ' + fmt(diff) : 'down ' + fmt(Math.abs(diff)));
+  var st = cfg.status(avg);
+  $('trend-note').textContent = 'Average of ' + data.length + ' readings: ' + fmt(avg) + cfg.unit + ', trend ' + arah + '.';
+  $('trend-status').textContent = 'Status: ' + st.label;
+  $('trend-status').className = 'font-bold ' + TONE[st.tone].text;
 }
 
+// ---------- render: log ----------
+function cell(v, unit, st) {
+  if (!has(v)) return '<td class="py-2 pr-4 text-slate-300">-</td>';
+  return '<td class="py-2 pr-4"><span class="font-semibold ' + TONE[st.tone].text + '">' + fmt(v) + unit + '</span></td>';
+}
 function renderLog() {
   var rows = state.logs.slice(0, 10);
   $('log-count').textContent = state.logs.length + (state.logs.length === 1 ? ' reading' : ' readings');
-  if (!rows.length) { $('log-body').innerHTML = '<tr><td colspan="5" class="py-6 text-center text-slate-400">No data received yet.</td></tr>'; return; }
+  if (!rows.length) { $('log-body').innerHTML = '<tr><td colspan="6" class="py-6 text-center text-slate-400">No data received yet.</td></tr>'; return; }
   $('log-body').innerHTML = rows.map(function (r, i) {
-    var st = moistStatus(r.kelembapan);
+    var fs = fieldScore(r);
     return '<tr class="border-b border-slate-50 ' + (i === 0 ? 'bg-emerald-50/40' : '') + '">' +
       '<td class="py-2 pr-4 font-mono text-slate-600">' + esc(r.waktu) + '</td>' +
       '<td class="py-2 pr-4 font-semibold text-slate-700">' + esc(r.device_id) + '</td>' +
-      '<td class="py-2 pr-4">' + fmt(r.suhu) + ' °C</td>' +
-      '<td class="py-2 pr-4">' + fmt(r.kelembapan) + '%</td>' +
-      '<td class="py-2"><span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ' + st.badge + '">' + st.label + '</span></td></tr>';
+      cell(num(r.soil), '%', soilStatus(num(r.soil))) +
+      cell(num(r.kelembapan), '%', airStatus(num(r.kelembapan))) +
+      cell(num(r.suhu), ' °C', tempStatus(num(r.suhu))) +
+      '<td class="py-2">' + (fs.score == null ? '-' : '<span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ' + TONE[fs.grade.tone].badge + '"' + (fs.partial ? ' title="Partial: ' + fs.count + ' of 3 sensors"' : '') + '>' + fs.score + ' • ' + fs.grade.label + (fs.partial ? '*' : '') + '</span>') + '</td></tr>';
   }).join('');
 }
 
+// ---------- render: alerts ----------
 function alertBox(kind, icon, title, body) {
   var c = { ok: ['bg-emerald-50', 'border-emerald-200/80', 'text-emerald-600', 'text-emerald-900', 'text-emerald-700'],
             info: ['bg-blue-50', 'border-blue-200/80', 'text-blue-600', 'text-blue-900', 'text-blue-700'],
@@ -547,26 +745,34 @@ function alertBox(kind, icon, title, body) {
   return '<div class="flex items-start gap-3 p-3 rounded-xl border ' + c[0] + ' ' + c[1] + '"><i class="fa-solid ' + icon + ' ' + c[2] + ' text-base mt-0.5"></i><div><div class="text-xs font-bold ' + c[3] + '">' + title + '</div><div class="text-[11px] mt-0.5 ' + c[4] + '">' + body + '</div></div></div>';
 }
 
-function renderAlerts(h, t, online, last) {
+function renderAlerts(soil, air, temp, online, last, fs) {
   var out = [];
   if (state.error) out.push(alertBox('bad', 'fa-plug-circle-xmark', 'Server unreachable', 'The dashboard could not fetch data from the API. Retrying automatically.'));
   else if (!last) out.push(alertBox('info', 'fa-satellite-dish', 'Waiting for ESP32', 'No readings have reached /api/sensor yet.'));
   else if (!online) out.push(alertBox('warn', 'fa-wifi', 'Sensor not sending data', 'Last reading was ' + ageText(ageSeconds(last)) + '. Check the ESP32 power or WiFi connection.'));
 
-  if (t != null) {
-    if (t > 35) out.push(alertBox('bad', 'fa-fire', 'Heat wave', 'Temperature ' + fmt(t) + ' &deg;C. Delay seedling transplanting and add shade.'));
-    else if (t > 32) out.push(alertBox('warn', 'fa-sun', 'High temperature', 'Temperature ' + fmt(t) + ' &deg;C. Leafy greens may wilt; favor heat-tolerant crops.'));
-    else out.push(alertBox('ok', 'fa-shield-halved', 'Stable temperature', 'Temperature ' + fmt(t) + ' &deg;C is within the safe range for tropical crops.'));
-  }
-  if (h != null) {
-    if (h < 40) out.push(alertBox('bad', 'fa-droplet-slash', 'Critically dry', 'Humidity ' + fmt(h) + '%. Irrigation is needed before planting.'));
-    else if (h < 60) out.push(alertBox('warn', 'fa-droplet', 'Low humidity', 'Humidity ' + fmt(h) + '%. Recommendations shift toward drought-tolerant crops.'));
-    else if (h > 95) out.push(alertBox('info', 'fa-water', 'Saturated conditions', 'Humidity ' + fmt(h) + '%. Watch for root rot and standing water.'));
-    else out.push(alertBox('ok', 'fa-cloud-rain', 'Water supply adequate', 'Humidity ' + fmt(h) + '% supports healthy crop growth.'));
+  if (last) {
+    if (!has(soil)) out.push(alertBox('info', 'fa-seedling', 'Soil sensor not reporting', 'Readings have no soil moisture. Set USE_SOIL_SENSOR to 1 and check the AOUT wire on GPIO 34.'));
+    else if (soil < 20) out.push(alertBox('bad', 'fa-droplet-slash', 'Soil critically dry', 'Soil moisture ' + fmt(soil) + '%. Irrigate before planting.'));
+    else if (soil < 40) out.push(alertBox('warn', 'fa-droplet', 'Soil dry', 'Soil moisture ' + fmt(soil) + '%. Recommendations shift toward drought-tolerant crops.'));
+    else if (soil < 60) out.push(alertBox('warn', 'fa-droplet', 'Soil slightly dry', 'Soil moisture ' + fmt(soil) + '%. Plantable, but drought-tolerant crops will do best.'));
+    else if (soil > 90) out.push(alertBox('info', 'fa-water', 'Soil saturated', 'Soil moisture ' + fmt(soil) + '%. Watch for root rot and standing water.'));
+    else out.push(alertBox('ok', 'fa-seedling', 'Soil moisture adequate', 'Soil moisture ' + fmt(soil) + '% supports planting.'));
+
+    if (has(temp)) {
+      if (temp > 35) out.push(alertBox('bad', 'fa-fire', 'Heat wave', 'Temperature ' + fmt(temp) + ' &deg;C. Delay transplanting and add shade.'));
+      else if (temp > 30) out.push(alertBox('warn', 'fa-sun', 'High temperature', 'Temperature ' + fmt(temp) + ' &deg;C. Favor heat-tolerant crops.'));
+      else if (temp < 18) out.push(alertBox('info', 'fa-snowflake', 'Cool temperature', 'Temperature ' + fmt(temp) + ' &deg;C. Growth will be slower.'));
+    }
+    if (has(air)) {
+      if (air > 85) out.push(alertBox('warn', 'fa-virus', 'Fungal disease risk', 'Air humidity ' + fmt(air) + '%. Improve spacing and air flow; avoid watering leaves.'));
+      else if (air < 40) out.push(alertBox('warn', 'fa-wind', 'Dry air', 'Air humidity ' + fmt(air) + '%. Soil will dry faster; consider mulching.'));
+    }
   }
   $('alerts').innerHTML = out.join('');
 }
 
+// ---------- render: parameters & plan ----------
 function renderParams() {
   $('crop-grid').innerHTML = Object.keys(CROPS).filter(function (k) { return !CROPS[k].hanyaKandidat; }).map(function (k) {
     var c = CROPS[k], on = k === state.crop;
@@ -593,9 +799,9 @@ function renderRecommendation() {
   var first = CROPS[plan[0].key];
   var last = latest();
   var reg = REGIONS[state.region];
+  var fs = fieldScore(last);
   var prioNames = PRIORITIES.filter(function (p) { return state.pr[p.key]; }).map(function (p) { return p.title; });
 
-  // Overview cards
   $('rec-main').textContent = first.nama;
   $('rec-main-note').innerHTML = 'Rotates after <strong>' + cur.nama + '</strong> (' + cur.akar + ' roots, ' + cur.famili + ').';
   $('active-icon').className = 'fa-solid ' + cur.icon;
@@ -605,7 +811,11 @@ function renderRecommendation() {
   $('active-fam').textContent = cur.famili;
   $('active-next').textContent = first.nama + ' (' + first.akar + ' roots)';
 
-  $('rec-summary').innerHTML = 'Based on ' + (last ? 'sensor humidity of <strong>' + fmt(last.kelembapan) + '%</strong> and temperature of <strong>' + fmt(last.suhu) + ' &deg;C</strong>' : '<strong>no sensor data yet</strong> (crop history only)') +
+  var readings = [];
+  if (last && has(last.soil)) readings.push('soil moisture <strong>' + fmt(last.soil) + '%</strong>');
+  if (last && has(last.kelembapan)) readings.push('air humidity <strong>' + fmt(last.kelembapan) + '%</strong>');
+  if (last && has(last.suhu)) readings.push('temperature <strong>' + fmt(last.suhu) + ' &deg;C</strong>');
+  $('rec-summary').innerHTML = 'Based on ' + (readings.length ? readings.join(', ') + ' (field score <strong>' + fs.score + ' &middot; ' + fs.grade.label + '</strong>)' : '<strong>no sensor data yet</strong> (crop history only)') +
     ' in <strong>' + reg.short + '</strong>, last crop <strong>' + cur.nama + '</strong>' + (prioNames.length ? ', priorities <strong>' + prioNames.join(', ') + '</strong>.' : '.');
 
   $('rec-metrics').innerHTML = [
@@ -675,6 +885,8 @@ function loadPrefs() {
       if (p.pr) state.pr = p.pr;
       if (REGIONS[p.region]) state.region = p.region;
     }
+    var t = localStorage.getItem('terratech-trend');
+    if (TRENDS[t]) state.trend = t;
   } catch (e) {}
   $('region-select').value = state.region;
 }
@@ -704,7 +916,7 @@ loadPrefs();
 renderAll();
 loadLogs();
 setInterval(loadLogs, POLL_MS);
-setInterval(renderLive, 10000); // refresh "x ago" labels even without new data
+setInterval(renderLive, 10000);
 window.addEventListener('resize', renderTrend);
 </script>
 </body>

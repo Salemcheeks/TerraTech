@@ -49,33 +49,53 @@ async function getLogs() {
   return (r.result || []).map((s) => JSON.parse(s));
 }
 
+// Returns a number, null (not sent), or NaN (sent but invalid)
+function optionalNumber(v) {
+  if (v === undefined || v === null || v === '') return null;
+  return Number(v);
+}
+
 // ------------------------------------------------------------------
-// API (unchanged for the ESP32: POST JSON { device_id, suhu, kelembapan })
-//   suhu = temperature (°C), kelembapan = humidity / moisture (%)
+// API: POST JSON from the ESP32
+//   {
+//     device_id:  "ESP32-01",
+//     suhu:       28.5,   // air temperature (°C)       - DHT22
+//     kelembapan: 75.2,   // air humidity (%)           - DHT22
+//     soil:       64.0,   // soil moisture (%)          - capacitive sensor
+//     soil_raw:   2010    // raw ADC value (optional, for calibration)
+//   }
+// Every field is optional, but at least one reading must be present,
+// so a failed DHT22 does not block soil data (and vice versa).
 // ------------------------------------------------------------------
 app.post('/api/sensor', async (req, res) => {
-  const { device_id, suhu, kelembapan } = req.body || {};
+  const body = req.body || {};
+  const suhu = optionalNumber(body.suhu);
+  const kelembapan = optionalNumber(body.kelembapan);
+  const soil = optionalNumber(body.soil !== undefined ? body.soil : body.kelembapan_tanah);
+  const soilRaw = optionalNumber(body.soil_raw);
 
-  if (suhu === undefined || kelembapan === undefined) {
-    return res.status(400).json({ status: 'error', message: 'Temperature or humidity value is missing' });
+  if (suhu === null && kelembapan === null && soil === null) {
+    return res.status(400).json({ status: 'error', message: 'No sensor values sent (suhu, kelembapan or soil)' });
   }
-  if (Number.isNaN(Number(suhu)) || Number.isNaN(Number(kelembapan))) {
-    return res.status(400).json({ status: 'error', message: 'Temperature and humidity must be numbers' });
+  if ([suhu, kelembapan, soil, soilRaw].some((v) => v !== null && Number.isNaN(v))) {
+    return res.status(400).json({ status: 'error', message: 'Sensor values must be numbers' });
   }
 
   const now = Date.now();
   const entry = {
     id: now,
     ts: now,
-    device_id: String(device_id || 'ESP32-01').slice(0, 40),
-    suhu: Number(suhu),
-    kelembapan: Number(kelembapan),
+    device_id: String(body.device_id || 'ESP32-01').slice(0, 40),
+    suhu,
+    kelembapan,
+    soil: soil === null ? null : Math.max(0, Math.min(100, soil)),
+    soil_raw: soilRaw,
     waktu: new Date(now).toLocaleTimeString('en-GB', { timeZone: 'Asia/Jakarta' })
   };
 
   try {
     await saveLog(entry);
-    console.log(`[IN] ${entry.device_id} | Temp: ${entry.suhu}°C | Humidity: ${entry.kelembapan}%`);
+    console.log(`[IN] ${entry.device_id} | Temp: ${entry.suhu}°C | Air: ${entry.kelembapan}% | Soil: ${entry.soil}%`);
     res.status(200).json({ status: 'success', data: entry });
   } catch (err) {
     console.error('Failed to save:', err.message);
